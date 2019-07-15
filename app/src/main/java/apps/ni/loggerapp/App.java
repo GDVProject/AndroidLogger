@@ -9,6 +9,6 @@ public class App extends Application {
     @Override
     public void onCreate() {
         super.onCreate();
-        Logger.initializeLogger(this, "TEST").writeToConsole(true).writeToFile(true).initialize();
+        Logger.initializeLogger(this).writeToConsole(true).setConsoleTag("TEST").writeToFile(true).initialize();
     }
 }

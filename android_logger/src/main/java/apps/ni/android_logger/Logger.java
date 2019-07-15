@@ -31,55 +31,313 @@ import java.util.concurrent.Semaphore;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipOutputStream;
 
+
+/**
+ * Logger object.
+ */
 public class Logger {
 
+    private static final String DEFAULT_APP_TAG = "MY_APP";
+    private static final String LOG_PATH = "logs";
+    private static final String LOG_FILE_NAME_CURRENT = "current.log";
+    private static final String LOG_FILE_NAME_PREVIOUS = "previous.log";
+    private static final String LOG_FILE_NAME_ZIP = "log.zip";
+    private static Logger logger;
+    private static SimpleDateFormat dateFormat = new SimpleDateFormat("dd.MM.yyyy HH:mm:ss.SSS", Locale.US);
+
+    /**
+     * Initializer for Logger.
+     */
     public static class Initializer {
 
         private Logger instance;
         private Context context;
 
-        public Initializer(Context context, String appTag) {
-            instance = new Logger(appTag);
+        /**
+         * Instantiates a new Initializer.
+         *
+         * @param context application context
+         */
+        public Initializer(Context context) {
+            instance = new Logger();
             this.context = context;
         }
 
+        /**
+         * Enables writing logs to console.
+         *
+         * @param write console logging state
+         * @return current Initializer
+         */
         public Initializer writeToConsole(boolean write) {
             instance.writeToConsole = write;
             return this;
         }
 
+        /**
+         * Set tag for console logs.
+         *
+         * @param appTag the tag for console logs
+         * @return current Initializer
+         */
+        public Initializer setConsoleTag(String appTag){
+            instance.appTag = appTag;
+            return this;
+        }
+
+        /**
+         * Enables writing logs to file.
+         *
+         * @param write file logging state
+         * @return current Initializer
+         */
         public Initializer writeToFile(boolean write) {
             instance.setWriteToFile(context, write);
             return this;
         }
 
+        /**
+         * Finishes Logger initializing.
+         */
         public void initialize() {
             instance.startLogging();
         }
 
     }
 
-    private static Logger logger;
-    private static final String LOG_PATH = "logs";
-    private static final String LOG_FILE_NAME_CURRENT = "current.log";
-    private static final String LOG_FILE_NAME_PREVIOUS = "previous.log";
-    private static final String LOG_FILE_NAME_ZIP = "log.zip";
-    private static SimpleDateFormat dateFormat = new SimpleDateFormat("dd.MM.yyyy HH:mm:ss.SSS", Locale.US);
-
     private final Semaphore semaphore = new Semaphore(1, true);
 
     private File logFile;
-    private String appTag;
+    private String appTag = DEFAULT_APP_TAG;
     private boolean writeToConsole;
     private boolean writeToFile;
     private String previousLogPath;
     private String currentLogPath;
     private String zipLogPath;
 
-    private Logger(String appTag) {
-        this.appTag = appTag;
+    /**
+     *  Private constructor for Logger object.
+     */
+    private Logger() {
+
     }
 
+    /**
+     * Creates new Initializer for logger.
+     *
+     * @param context app context
+     * @return initializer instance
+     */
+    public static Initializer initializeLogger(Context context) {
+        return new Initializer(context);
+    }
+
+    /**
+     * Log simple message.
+     *
+     * @param message the message
+     */
+    public static void log(String message) {
+        getLogger().logMessage(message);
+    }
+
+    /**
+     * Log message with object context.
+     *
+     * @param context object context
+     * @param message the message
+     */
+    public static void log(Object context, String message) {
+        getLogger().logMessage(context, message);
+    }
+
+    /**
+     * Log content of bundle object.
+     *
+     * @param description the description of bundle
+     * @param bundle      the bundle
+     */
+    public static void log(String description, Bundle bundle) {
+        getLogger().logMessage(description, bundle);
+    }
+
+    /**
+     * Log content of intent .
+     *
+     * @param description the description of intent
+     * @param intent      the intent
+     */
+    public static void log(String description, Intent intent) {
+        getLogger().logMessage(description, intent);
+    }
+
+    /**
+     * Log exception.
+     *
+     * @param description the description of exception
+     * @param t           the exception
+     */
+    public static void log(String description, Throwable t) {
+        getLogger().logMessage(description, t);
+    }
+
+    /**
+     * Share logs.
+     *
+     * @param context app context
+     * @param title   the title of share method selection dialog
+     */
+    public static void shareLog(Activity context, String title) {
+        shareLog(context, title, true);
+    }
+
+    /**
+     * Share logs.
+     *
+     * @param context app context
+     * @param title   the title of share method selection dialog
+     * @param zip     should logs be packed to zip-archive
+     */
+    public static void shareLog(Activity context, String title, boolean zip) {
+        Intent intent;
+        if (zip) {
+            intent = shareZippedLog(context);
+        } else {
+            intent = shareRawLogs(context);
+        }
+        if (intent != null) {
+            Intent chooserIntent = Intent.createChooser(intent, title);
+            if (chooserIntent != null) {
+                context.startActivityForResult(chooserIntent, 123);
+                return;
+            }
+        }
+        Toast.makeText(context, R.string.log_sharing_failed, Toast.LENGTH_LONG).show();
+    }
+
+    /**
+     * Gets current log file name.
+     *
+     * @return the current log file name
+     */
+    public static String getCurrentLogFileName() {
+        return getLogger().currentLogPath;
+    }
+
+    /**
+     * Gets previous log file name.
+     *
+     * @return the previous log file name
+     */
+    public static String getPreviousLogFileName() {
+        return getLogger().previousLogPath;
+    }
+
+    /**
+     * Gets current log file content.
+     *
+     * @return the current log file content
+     */
+    public static String getCurrentLog() {
+        return getLogger().getLog(getLogger().currentLogPath);
+    }
+
+    /**
+     * Gets previous log file content.
+     *
+     * @return the previous log file content
+     */
+    public static String getPreviousLog() {
+        return getLogger().getLog(getLogger().previousLogPath);
+    }
+
+    /**
+     * Zips log files to single zip-archive.
+     *
+     * @return path to zip-archive with log files
+     */
+    public static String getLogZip() {
+        return getLogger().zipLog();
+    }
+
+    /**
+     * Safe getter of logger instance
+     *
+     * @return
+     */
+    private static Logger getLogger() {
+        if (logger != null) {
+            return logger;
+        } else {
+            throw new LoggerNotInitializedException();
+        }
+    }
+
+    /**
+     * Zips log files to single archive and prepare intent for sharing
+     *
+     * @param context app context
+     * @return intent for logs sharing
+     */
+    private static Intent shareZippedLog(Context context) {
+        Intent intent = new Intent(Intent.ACTION_SEND);
+        String filePath = getLogger().zipLog();
+        if (filePath != null) {
+            Uri uri = getFileUri(context, filePath);
+            if (uri != null) {
+                intent.setType("application/zip");
+                intent.putExtra(Intent.EXTRA_STREAM, uri);
+            }
+            return intent;
+        }
+        return null;
+    }
+
+    /**
+     * Prepares intent for sharing raw log files
+     *
+     * @param context app context
+     * @return intent for logs sharing
+     */
+    private static Intent shareRawLogs(Context context) {
+        Intent intent = new Intent(Intent.ACTION_SEND_MULTIPLE);
+        Logger logger = getLogger();
+        ArrayList<Uri> uris = new ArrayList<>();
+        String[] files = new String[]{logger.previousLogPath, logger.currentLogPath};
+        for (String filePath : files) {
+            Uri uri = getFileUri(context, filePath);
+            if (uri != null) {
+                uris.add(uri);
+            }
+        }
+        if (uris.size() > 0) {
+            intent.setType("text/plain");
+            intent.putExtra(Intent.EXTRA_STREAM, uris);
+            return intent;
+        }
+        return null;
+    }
+
+    /**
+     * Prepares uri for given log file
+     *
+     * @param context app context
+     * @param path path to log file
+     * @return uri for given log file
+     */
+    private static Uri getFileUri(Context context, String path) {
+        if (path != null) {
+            File file = new File(path);
+            if (file.exists()) {
+                return FileProvider.getUriForFile(context, "apps.ni.android_logger", file);
+            }
+        }
+        return null;
+    }
+
+    /**
+     *  Setup file logging.
+     */
     private void setWriteToFile(Context context, boolean write) {
         this.writeToFile = write;
         if (this.writeToFile) {
@@ -111,122 +369,9 @@ public class Logger {
         }
     }
 
-    public static Initializer initializeLogger(Context context, String tag) {
-        return new Initializer(context, tag);
-    }
-
-    private static Logger getLogger() {
-        if (logger != null) {
-            return logger;
-        } else {
-            throw new LoggerNotInitializedException();
-        }
-    }
-
-    public static void log(String message) {
-        getLogger().logMessage(message);
-    }
-
-    public static void log(Object context, String message) {
-        getLogger().logMessage(context, message);
-    }
-
-    public static void log(String description, Bundle bundle) {
-        getLogger().logMessage(description, bundle);
-    }
-
-    public static void log(String description, Intent intent) {
-        getLogger().logMessage(description, intent);
-    }
-
-    public static void log(String description, Throwable t) {
-        getLogger().logMessage(description, t);
-    }
-
-    public static void shareLog(Activity context, String title) {
-        shareLog(context, title, true);
-    }
-
-    public static void shareLog(Activity context, String title, boolean zip) {
-        Intent intent;
-        if (zip) {
-            intent = shareZippedLog(context);
-        } else {
-            intent = shareRawLogs(context);
-        }
-        if (intent != null) {
-            Intent chooserIntent = Intent.createChooser(intent, title);
-            if (chooserIntent != null) {
-                context.startActivityForResult(chooserIntent, 123);
-                return;
-            }
-        }
-        Toast.makeText(context, R.string.log_sharing_failed, Toast.LENGTH_LONG).show();
-    }
-
-    private static Intent shareZippedLog(Context context) {
-        Intent intent = new Intent(Intent.ACTION_SEND);
-        String filePath = getLogger().zipLog();
-        if (filePath != null) {
-            Uri uri = getFileUri(context, filePath);
-            if (uri != null) {
-                intent.setType("application/zip");
-                intent.putExtra(Intent.EXTRA_STREAM, uri);
-            }
-            return intent;
-        }
-        return null;
-    }
-
-    private static Intent shareRawLogs(Context context) {
-        Intent intent = new Intent(Intent.ACTION_SEND_MULTIPLE);
-        Logger logger = getLogger();
-        ArrayList<Uri> uris = new ArrayList<>();
-        String[] files = new String[]{logger.previousLogPath, logger.currentLogPath};
-        for (String filePath : files) {
-            Uri uri = getFileUri(context, filePath);
-            if (uri != null) {
-                uris.add(uri);
-            }
-        }
-        if (uris.size() > 0) {
-            intent.setType("text/plain");
-            intent.putExtra(Intent.EXTRA_STREAM, uris);
-            return intent;
-        }
-        return null;
-    }
-
-    private static Uri getFileUri(Context context, String path) {
-        if (path != null) {
-            File file = new File(path);
-            if (file.exists()) {
-                return FileProvider.getUriForFile(context, "apps.ni.android_logger", file);
-            }
-        }
-        return null;
-    }
-
-    public static String getCurrentLogFileName() {
-        return getLogger().currentLogPath;
-    }
-
-    public static String getPreviousLogFileName() {
-        return getLogger().previousLogPath;
-    }
-
-    public static String getCurrentLog() {
-        return getLogger().getLog(getLogger().currentLogPath);
-    }
-
-    public static String getPreviousLog() {
-        return getLogger().getLog(getLogger().previousLogPath);
-    }
-
-    public static String getLogZip() {
-        return getLogger().zipLog();
-    }
-
+    /**
+     * Starts logging
+     */
     private void startLogging() {
         logger = this;
         final Thread.UncaughtExceptionHandler regularHandler = Thread.getDefaultUncaughtExceptionHandler();
@@ -241,6 +386,12 @@ public class Logger {
         log(String.format(Locale.US, "%s (SDK %d)", Build.MODEL, Build.VERSION.SDK_INT));
     }
 
+    /**
+     * Gets content of given log file
+     *
+     * @param fileName path to log file
+     * @return content of log file
+     */
     private String getLog(String fileName) {
         if (fileName != null) {
             StringBuilder stringBuilder = new StringBuilder();
@@ -262,6 +413,11 @@ public class Logger {
         }
     }
 
+    /**
+     * Zips log files to single zip-archive
+     *
+     * @return path to zip-archive
+     */
     private String zipLog() {
         try (FileOutputStream fileOutputStream = new FileOutputStream(zipLogPath);
              ZipOutputStream zipOutputStream = new ZipOutputStream(fileOutputStream)) {
@@ -274,6 +430,13 @@ public class Logger {
         return zipLogPath;
     }
 
+    /**
+     * Adds given log file to zipOutputStream object
+     *
+     * @param zipOutputStream stream to which log file should be added
+     * @param log content of log file which should be added to zip-archive
+     * @param fileName name of log file in zip-archive
+     */
     private void addLogToZip(ZipOutputStream zipOutputStream, String log, String fileName) {
         try {
             if (!TextUtils.isEmpty(log)) {
@@ -286,23 +449,53 @@ public class Logger {
         }
     }
 
+    /**
+     * Logs content of the bundle object
+     *
+     * @param description description of the bundle object
+     * @param bundle bundle object
+     */
     private void logMessage(String description, Bundle bundle) {
         log(getBundleString(description, bundle));
     }
 
+
+    /**
+     * Logs content of the intent object
+     *
+     * @param description description of the intent object
+     * @param intent intent object
+     */
     private void logMessage(String description, Intent intent) {
         log(getIntentString(description, intent));
     }
 
+    /**
+     * Logs message with object context
+     *
+     * @param context object context
+     * @param message log message
+     */
     private void logMessage(Object context, String message) {
         String m = String.format("%s: %s", getComponentName(context), message);
         logMessage(m);
     }
 
+    /**
+     * Logs exception
+     *
+     * @param description description of the exception
+     * @param e exception
+     */
     private void logMessage(String description, Throwable e) {
         logMessage(String.format("%s:\n%s", description, getExceptionString(e)));
     }
 
+    /**
+     * Logs given message in according with logger settings
+     *
+     * @param message message to log
+     */
     private void logMessage(String message) {
         if (writeToConsole) {
             logToConsole(message);
@@ -312,10 +505,20 @@ public class Logger {
         }
     }
 
+    /**
+     * Writes given message to console
+     *
+     * @param message message to log
+     */
     private void logToConsole(String message) {
         Log.i(appTag, message);
     }
 
+    /**
+     * Writes given message to file
+     *
+     * @param message message to log
+     */
     private void logToFile(final String message) {
         final String text = String.format("%s - %s", dateFormat.format(new Date()), message);
         new Thread(new Runnable() {
@@ -333,6 +536,11 @@ public class Logger {
         }).start();
     }
 
+    /**
+     * Appends given message to log file
+     *
+     * @param message message to log
+     */
     synchronized private void appendToFile(String message) {
         try (
                 FileOutputStream fos = new FileOutputStream(logFile, true);
@@ -345,6 +553,13 @@ public class Logger {
         }
     }
 
+    /**
+     * Returns the string representation of the given bundle object
+     *
+     * @param description bundle object description
+     * @param bundle bundle object
+     * @return string representation of the bundle object
+     */
     private String getBundleString(String description, Bundle bundle) {
         StringBuilder stringBuilder = new StringBuilder();
         if (bundle != null) {
@@ -359,6 +574,13 @@ public class Logger {
         return stringBuilder.toString();
     }
 
+    /**
+     * Returns the string representation of the given intent object
+     *
+     * @param description description of the intent object
+     * @param intent intent object
+     * @return string representation of the intent object
+     */
     private String getIntentString(String description, Intent intent) {
         StringBuilder stringBuilder = new StringBuilder();
         if (intent != null) {
@@ -372,6 +594,12 @@ public class Logger {
         return stringBuilder.toString();
     }
 
+    /**
+     * Returns the string representation of context object class
+     *
+     * @param component context object
+     * @return string representation of the context object
+     */
     private String getComponentName(Object component) {
         if (component != null) {
             return component.getClass().getSimpleName();
@@ -379,6 +607,12 @@ public class Logger {
         return "null";
     }
 
+    /**
+     * Returns the string representation of exception
+     *
+     * @param e exception
+     * @return string representation of exception
+     */
     private String getExceptionString(Throwable e){
         Throwable throwable = e;
         StringBuilder stringBuilder = new StringBuilder();

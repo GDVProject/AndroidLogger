@@ -1,7 +1,6 @@
 package apps.ni.android_logger;
 
 import android.app.Activity;
-import android.content.ComponentName;
 import android.content.Context;
 import android.content.Intent;
 import android.net.Uri;
@@ -27,9 +26,12 @@ import java.util.ArrayList;
 import java.util.Date;
 import java.util.Locale;
 import java.util.Set;
+import java.util.UUID;
 import java.util.concurrent.Semaphore;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipOutputStream;
+
+import retrofit2.Retrofit;
 
 
 /**
@@ -37,7 +39,6 @@ import java.util.zip.ZipOutputStream;
  */
 public class Logger {
 
-    private static final String DEFAULT_APP_TAG = "MY_APP";
     private static final String LOG_PATH = "logs";
     private static final String LOG_FILE_NAME_CURRENT = "current.log";
     private static final String LOG_FILE_NAME_PREVIOUS = "previous.log";
@@ -66,21 +67,11 @@ public class Logger {
         /**
          * Enables writing logs to console.
          *
-         * @param write console logging state
-         * @return current Initializer
-         */
-        public Initializer writeToConsole(boolean write) {
-            instance.writeToConsole = write;
-            return this;
-        }
-
-        /**
-         * Set tag for console logs.
-         *
          * @param appTag the tag for console logs
          * @return current Initializer
          */
-        public Initializer setConsoleTag(String appTag){
+        public Initializer writeToConsole(String appTag) {
+            instance.writeToConsole = true;
             instance.appTag = appTag;
             return this;
         }
@@ -88,11 +79,21 @@ public class Logger {
         /**
          * Enables writing logs to file.
          *
-         * @param write file logging state
          * @return current Initializer
          */
-        public Initializer writeToFile(boolean write) {
-            instance.setWriteToFile(context, write);
+        public Initializer writeToFile() {
+            instance.setWriteToFile(context);
+            return this;
+        }
+
+        /**
+         * Enables writing logs to remote server
+         *
+         * @param apiPath url to server api
+         * @return current Initializer
+         */
+        public Initializer writeToServer(String apiPath, String apiEndPoint) {
+            instance.setWriteToServer(apiPath, apiEndPoint);
             return this;
         }
 
@@ -105,18 +106,24 @@ public class Logger {
 
     }
 
-    private final Semaphore semaphore = new Semaphore(1, true);
+    private final Semaphore fileSemaphore = new Semaphore(1, true);
+    private final Semaphore networkSemaphore = new Semaphore(1, true);
 
     private File logFile;
-    private String appTag = DEFAULT_APP_TAG;
+    private String appTag;
     private boolean writeToConsole;
     private boolean writeToFile;
+    private boolean writeToServer;
     private String previousLogPath;
     private String currentLogPath;
     private String zipLogPath;
+    private Retrofit retrofit;
+    private LogApi logApi;
+    private String apiEndPoint;
+    private String sessionId;
 
     /**
-     *  Private constructor for Logger object.
+     * Private constructor for Logger object.
      */
     private Logger() {
 
@@ -322,7 +329,7 @@ public class Logger {
      * Prepares uri for given log file
      *
      * @param context app context
-     * @param path path to log file
+     * @param path    path to log file
      * @return uri for given log file
      */
     private static Uri getFileUri(Context context, String path) {
@@ -336,37 +343,52 @@ public class Logger {
     }
 
     /**
-     *  Setup file logging.
+     * Setup file logging
+     *
+     * @param context app context
      */
-    private void setWriteToFile(Context context, boolean write) {
-        this.writeToFile = write;
-        if (this.writeToFile) {
-            try {
-                File directory = new File(context.getFilesDir(), LOG_PATH);
-                if (!directory.exists()) {
-                    directory.mkdir();
-                }
-                File zip = new File(directory, LOG_FILE_NAME_ZIP);
-                if (zip.exists()) {
-                    zip.delete();
-                }
-                zipLogPath = zip.getAbsolutePath();
-                File previous = new File(directory, LOG_FILE_NAME_PREVIOUS);
-                if (previous.exists()) {
-                    previous.delete();
-                }
-                logFile = new File(directory, LOG_FILE_NAME_CURRENT);
-                if (logFile.exists()) {
-                    logFile.renameTo(previous);
-                    previousLogPath = previous.getAbsolutePath();
-                    logFile.delete();
-                }
-                logFile.createNewFile();
-                currentLogPath = logFile.getPath();
-            } catch (IOException e) {
-                this.writeToFile = false;
+    private void setWriteToFile(Context context) {
+        this.writeToFile = true;
+        try {
+            File directory = new File(context.getFilesDir(), LOG_PATH);
+            if (!directory.exists()) {
+                directory.mkdir();
             }
+            File zip = new File(directory, LOG_FILE_NAME_ZIP);
+            if (zip.exists()) {
+                zip.delete();
+            }
+            zipLogPath = zip.getAbsolutePath();
+            File previous = new File(directory, LOG_FILE_NAME_PREVIOUS);
+            if (previous.exists()) {
+                previous.delete();
+            }
+            logFile = new File(directory, LOG_FILE_NAME_CURRENT);
+            if (logFile.exists()) {
+                logFile.renameTo(previous);
+                previousLogPath = previous.getAbsolutePath();
+                logFile.delete();
+            }
+            logFile.createNewFile();
+            currentLogPath = logFile.getPath();
+        } catch (IOException e) {
+            this.writeToFile = false;
         }
+    }
+
+    /**
+     * Setup logging to remote server
+     *
+     * @param apiPath url to server api
+     */
+    private void setWriteToServer(String apiPath, String apiEndPoint) {
+        this.writeToServer = true;
+        retrofit = new Retrofit.Builder()
+                .baseUrl(apiPath)
+                .build();
+        this.apiEndPoint = apiEndPoint;
+        logApi = retrofit.create(LogApi.class);
+        sessionId = UUID.randomUUID().toString();
     }
 
     /**
@@ -434,8 +456,8 @@ public class Logger {
      * Adds given log file to zipOutputStream object
      *
      * @param zipOutputStream stream to which log file should be added
-     * @param log content of log file which should be added to zip-archive
-     * @param fileName name of log file in zip-archive
+     * @param log             content of log file which should be added to zip-archive
+     * @param fileName        name of log file in zip-archive
      */
     private void addLogToZip(ZipOutputStream zipOutputStream, String log, String fileName) {
         try {
@@ -453,7 +475,7 @@ public class Logger {
      * Logs content of the bundle object
      *
      * @param description description of the bundle object
-     * @param bundle bundle object
+     * @param bundle      bundle object
      */
     private void logMessage(String description, Bundle bundle) {
         log(getBundleString(description, bundle));
@@ -464,7 +486,7 @@ public class Logger {
      * Logs content of the intent object
      *
      * @param description description of the intent object
-     * @param intent intent object
+     * @param intent      intent object
      */
     private void logMessage(String description, Intent intent) {
         log(getIntentString(description, intent));
@@ -485,7 +507,7 @@ public class Logger {
      * Logs exception
      *
      * @param description description of the exception
-     * @param e exception
+     * @param e           exception
      */
     private void logMessage(String description, Throwable e) {
         logMessage(String.format("%s:\n%s", description, getExceptionString(e)));
@@ -502,6 +524,9 @@ public class Logger {
         }
         if (writeToFile) {
             logToFile(message);
+        }
+        if (writeToServer){
+            logToServer(message);
         }
     }
 
@@ -525,12 +550,12 @@ public class Logger {
             @Override
             public void run() {
                 try {
-                    semaphore.acquire();
+                    fileSemaphore.acquire();
                     appendToFile(text);
                 } catch (InterruptedException e) {
                     e.printStackTrace();
                 } finally {
-                    semaphore.release();
+                    fileSemaphore.release();
                 }
             }
         }).start();
@@ -541,7 +566,7 @@ public class Logger {
      *
      * @param message message to log
      */
-    synchronized private void appendToFile(String message) {
+    private void appendToFile(String message) {
         try (
                 FileOutputStream fos = new FileOutputStream(logFile, true);
                 OutputStreamWriter osw = new OutputStreamWriter(fos);
@@ -554,10 +579,32 @@ public class Logger {
     }
 
     /**
+     * Writes given log message to remote server
+     *
+     * @param message message to log
+     */
+    private void logToServer(String message){
+        final String text = String.format("%s - %s", dateFormat.format(new Date()), message);
+        new Thread(new Runnable() {
+            @Override
+            public void run() {
+                try {
+                    networkSemaphore.acquire();
+                    logApi.postLog(apiEndPoint, sessionId, text).execute();
+                } catch (InterruptedException | IOException e) {
+                    e.printStackTrace();
+                } finally {
+                    networkSemaphore.release();
+                }
+            }
+        }).start();
+    }
+
+    /**
      * Returns the string representation of the given bundle object
      *
      * @param description bundle object description
-     * @param bundle bundle object
+     * @param bundle      bundle object
      * @return string representation of the bundle object
      */
     private String getBundleString(String description, Bundle bundle) {
@@ -578,7 +625,7 @@ public class Logger {
      * Returns the string representation of the given intent object
      *
      * @param description description of the intent object
-     * @param intent intent object
+     * @param intent      intent object
      * @return string representation of the intent object
      */
     private String getIntentString(String description, Intent intent) {
@@ -613,7 +660,7 @@ public class Logger {
      * @param e exception
      * @return string representation of exception
      */
-    private String getExceptionString(Throwable e){
+    private String getExceptionString(Throwable e) {
         Throwable throwable = e;
         StringBuilder stringBuilder = new StringBuilder();
         do {
@@ -623,7 +670,7 @@ public class Logger {
                 stringBuilder.append(element.toString());
             }
             throwable = throwable.getCause();
-            if (throwable != null){
+            if (throwable != null) {
                 stringBuilder.append("\nCaused by: ");
             }
         } while (throwable != null);

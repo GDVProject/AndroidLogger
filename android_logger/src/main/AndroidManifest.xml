@@ -1,6 +1,8 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
     package="apps.ni.android_logger">
 
+    <uses-permission android:name="android.permission.INTERNET"/>
+
     <application>
         <provider
             android:authorities="apps.ni.android_logger"

@@ -661,20 +661,22 @@ public class Logger {
      * @return string representation of exception
      */
     private String getExceptionString(Throwable e) {
-        Throwable throwable = e;
-        StringBuilder stringBuilder = new StringBuilder();
-        do {
-            stringBuilder.append(String.format("%s: %s", getComponentName(throwable), throwable.getMessage()));
-            for (StackTraceElement element : throwable.getStackTrace()) {
-                stringBuilder.append("\n\t");
-                stringBuilder.append(element.toString());
-            }
-            throwable = throwable.getCause();
-            if (throwable != null) {
-                stringBuilder.append("\nCaused by: ");
-            }
-        } while (throwable != null);
-        return stringBuilder.toString();
+        if (e != null) {
+            Throwable throwable = e;
+            StringBuilder stringBuilder = new StringBuilder();
+            do {
+                stringBuilder.append(String.format("%s: %s", getComponentName(throwable), throwable.getMessage()));
+                for (StackTraceElement element : throwable.getStackTrace()) {
+                    stringBuilder.append("\n\t");
+                    stringBuilder.append(element.toString());
+                }
+                throwable = throwable.getCause();
+                if (throwable != null) {
+                    stringBuilder.append("\nCaused by: ");
+                }
+            } while (throwable != null);
+            return stringBuilder.toString();
+        } else return "";
     }
 
 }

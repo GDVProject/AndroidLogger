@@ -336,7 +336,7 @@ public class Logger {
         if (path != null) {
             File file = new File(path);
             if (file.exists()) {
-                return FileProvider.getUriForFile(context, "apps.ni.android_logger", file);
+                return FileProvider.getUriForFile(context,  String.format("%s.android_logger", context.getPackageName()), file);
             }
         }
         return null;

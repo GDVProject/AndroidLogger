@@ -5,7 +5,7 @@
 
     <application>
         <provider
-            android:authorities="apps.ni.android_logger"
+            android:authorities="${applicationId}.android_logger"
             android:name="androidx.core.content.FileProvider"
             android:exported="false"
             android:grantUriPermissions="true">

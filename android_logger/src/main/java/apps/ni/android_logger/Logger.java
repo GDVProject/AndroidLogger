@@ -681,7 +681,7 @@ public class Logger {
         } else return "";
     }
 
-    public String getDeviceData() {
-        return deviceData;
+    public static String getDeviceData() {
+        return logger.deviceData;
     }
 }

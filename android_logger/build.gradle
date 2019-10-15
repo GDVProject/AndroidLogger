@@ -4,8 +4,8 @@ android {
     compileSdkVersion 29
 
     def versionMajor = 0
-    def versionMinor = 3
-    def versionPatch = 7
+    def versionMinor = 4
+    def versionPatch = 0
 
     def code = versionMajor * 100 + versionMinor
 

@@ -109,7 +109,6 @@ public class Logger {
     private final Semaphore fileSemaphore = new Semaphore(1, true);
     private final Semaphore networkSemaphore = new Semaphore(1, true);
 
-    private String deviceData;
     private File logFile;
     private String appTag;
     private boolean writeToConsole;
@@ -397,7 +396,7 @@ public class Logger {
      */
     private void startLogging() {
         logger = this;
-        deviceData = String.format(Locale.US, "%s (SDK %d)", Build.MODEL, Build.VERSION.SDK_INT);
+        String deviceData = String.format(Locale.US, "%s (SDK %d)", Build.MODEL, Build.VERSION.SDK_INT);
         final Thread.UncaughtExceptionHandler regularHandler = Thread.getDefaultUncaughtExceptionHandler();
         Thread.UncaughtExceptionHandler logHandler = new Thread.UncaughtExceptionHandler() {
             @Override
@@ -681,7 +680,4 @@ public class Logger {
         } else return "";
     }
 
-    public static String getDeviceData() {
-        return logger.deviceData;
-    }
 }

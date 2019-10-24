@@ -164,7 +164,7 @@ public class Logger {
      * @param description the description of bundle
      * @param bundle      the bundle
      */
-    public static void log(String description, Bundle bundle) {
+    public static void log(Object context, String description, Bundle bundle) {
         getLogger().logMessage(description, bundle);
     }
 
@@ -174,7 +174,7 @@ public class Logger {
      * @param description the description of intent
      * @param intent      the intent
      */
-    public static void log(String description, Intent intent) {
+    public static void log(Object context, String description, Intent intent) {
         getLogger().logMessage(description, intent);
     }
 
@@ -184,7 +184,7 @@ public class Logger {
      * @param description the description of exception
      * @param t           the exception
      */
-    public static void log(String description, Throwable t) {
+    public static void log(Object context, String description, Throwable t) {
         getLogger().logMessage(description, t);
     }
 

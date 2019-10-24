@@ -19,14 +19,14 @@ public abstract class LogActivity extends AppCompatActivity {
     protected void onCreate(@Nullable Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         Logger.log(this, "Lifecycle: onCreate");
-        Logger.log("savedInstanceState", savedInstanceState);
+        Logger.log(this,"savedInstanceState", savedInstanceState);
     }
 
     @Override
     protected void onPostCreate(@Nullable Bundle savedInstanceState) {
         super.onPostCreate(savedInstanceState);
         Logger.log(this, "Lifecycle: onPostCreate");
-        Logger.log("savedInstanceState", savedInstanceState);
+        Logger.log(this,"savedInstanceState", savedInstanceState);
     }
 
     @Override
@@ -74,30 +74,30 @@ public abstract class LogActivity extends AppCompatActivity {
     @Override
     protected void onActivityResult(int requestCode, int resultCode, @Nullable Intent data) {
         Logger.log(this, String.format(Locale.US, "ActivityResult received, requestCode = %d, resultCode = %d", requestCode, resultCode));
-        Logger.log("Data", data);
+        Logger.log(this,"Data", data);
         super.onActivityResult(requestCode, resultCode, data);
     }
 
     @Override
     public void startActivity(Intent intent, @Nullable Bundle options) {
         Logger.log(this, "Starting Activity");
-        Logger.log("Intent", intent);
-        Logger.log("Options", options);
+        Logger.log(this,"Intent", intent);
+        Logger.log(this,"Options", options);
         super.startActivity(intent, options);
     }
 
     @Override
     public void startActivityForResult(Intent intent, int requestCode, @Nullable Bundle options) {
         Logger.log(this, String.format(Locale.US, "Starting Activity for result (request code: %d)", requestCode));
-        Logger.log("Intent", intent);
-        Logger.log("Options", options);
+        Logger.log(this,"Intent", intent);
+        Logger.log(this,"Options", options);
         super.startActivityForResult(intent, requestCode, options);
     }
 
     @Override
     public ComponentName startService(Intent service) {
         Logger.log("this, Starting service");
-        Logger.log("Intent", service);
+        Logger.log(this,"Intent", service);
         ComponentName componentName = super.startService(service);
         Logger.log(this, String.format("Service component name: %s", componentName != null ? componentName.getClass().getSimpleName() : "null"));
         return componentName;
@@ -106,7 +106,7 @@ public abstract class LogActivity extends AppCompatActivity {
     @Override
     public ComponentName startForegroundService(Intent service) {
         Logger.log(this, "Starting foreground service");
-        Logger.log("Intent", service);
+        Logger.log(this,"Intent", service);
         ComponentName componentName = super.startForegroundService(service);
         Logger.log(this, String.format("Service component name: %s", componentName != null ? componentName.getClass().getSimpleName() : "null"));
         return componentName;

@@ -1,6 +1,5 @@
 package apps.ni.android_logger;
 
-import android.app.Dialog;
 import android.content.Context;
 import android.content.DialogInterface;
 import android.os.Bundle;
@@ -26,7 +25,7 @@ public abstract class LogDialogFragment extends DialogFragment {
     @Override
     public void onCreate(@Nullable Bundle savedInstanceState) {
         Logger.log(this, "Lifecycle: onCreate");
-        Logger.log("savedInstanceState", savedInstanceState);
+        Logger.log(this,"savedInstanceState", savedInstanceState);
         super.onCreate(savedInstanceState);
     }
 
@@ -45,7 +44,7 @@ public abstract class LogDialogFragment extends DialogFragment {
     @Override
     public void onActivityCreated(@Nullable Bundle savedInstanceState) {
         Logger.log(this, "Lifecycle: onActivityCreated");
-        Logger.log("savedInstanceState", savedInstanceState);
+        Logger.log(this,"savedInstanceState", savedInstanceState);
         super.onActivityCreated(savedInstanceState);
     }
 
@@ -58,7 +57,7 @@ public abstract class LogDialogFragment extends DialogFragment {
     @Override
     public void onSaveInstanceState(@NonNull Bundle outState) {
         Logger.log(this, "Lifecycle: onSaveInstanceState");
-        Logger.log("outState", outState);
+        Logger.log(this,"outState", outState);
         super.onSaveInstanceState(outState);
     }
 

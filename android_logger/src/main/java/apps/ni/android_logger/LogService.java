@@ -17,7 +17,7 @@ public abstract class LogService extends Service {
     @Override
     public int onStartCommand(Intent intent, int flags, int startId) {
         Logger.log(this, String.format(Locale.US, "Lifecycle: onStartCommand, flags: %d, startId: %d", flags, startId));
-        Logger.log("INTENT", intent);
+        Logger.log(this,"INTENT", intent);
         return super.onStartCommand(intent, flags, startId);
     }
 
@@ -48,7 +48,7 @@ public abstract class LogService extends Service {
     @Override
     public void onTaskRemoved(Intent rootIntent) {
         Logger.log(this, "Lifecycle: onTaskRemoved");
-        Logger.log("INTENT", rootIntent);
+        Logger.log(this,"INTENT", rootIntent);
         super.onTaskRemoved(rootIntent);
     }
 

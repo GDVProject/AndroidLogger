@@ -23,28 +23,28 @@ public abstract class LogFragment extends Fragment {
     @Override
     public void onCreate(@Nullable Bundle savedInstanceState) {
         Logger.log(this, "Lifecycle: onCreate");
-        Logger.log("savedInstanceState", savedInstanceState);
+        Logger.log(this,"savedInstanceState", savedInstanceState);
         super.onCreate(savedInstanceState);
     }
 
     @Override
     public void onViewCreated(@NonNull View view, @Nullable Bundle savedInstanceState) {
         Logger.log(this, "Lifecycle: onViewCreated");
-        Logger.log("savedInstanceState", savedInstanceState);
+        Logger.log(this,"savedInstanceState", savedInstanceState);
         super.onViewCreated(view, savedInstanceState);
     }
 
     @Override
     public void onActivityCreated(@Nullable Bundle savedInstanceState) {
         Logger.log(this, "Lifecycle: onActivityCreated");
-        Logger.log("savedInstanceState", savedInstanceState);
+        Logger.log(this,"savedInstanceState", savedInstanceState);
         super.onActivityCreated(savedInstanceState);
     }
 
     @Override
     public void onViewStateRestored(@Nullable Bundle savedInstanceState) {
         Logger.log(this, "Lifecycle: onViewStateRestored");
-        Logger.log("savedInstanceState", savedInstanceState);
+        Logger.log(this,"savedInstanceState", savedInstanceState);
         super.onViewStateRestored(savedInstanceState);
     }
 
@@ -63,7 +63,7 @@ public abstract class LogFragment extends Fragment {
     @Override
     public void onSaveInstanceState(@NonNull Bundle outState) {
         Logger.log(this, "Lifecycle: onSaveInstanceState");
-        Logger.log("outState", outState);
+        Logger.log(this,"outState", outState);
         super.onSaveInstanceState(outState);
     }
 
@@ -106,7 +106,7 @@ public abstract class LogFragment extends Fragment {
     @Override
     public void onActivityResult(int requestCode, int resultCode, Intent data) {
         Logger.log(this, String.format(Locale.US, "ActivityResult received, requestCode = %d, resultCode = %d", requestCode, resultCode));
-        Logger.log("Data", data);
+        Logger.log(this,"Data", data);
         super.onActivityResult(requestCode, resultCode, data);
     }
 
@@ -124,16 +124,16 @@ public abstract class LogFragment extends Fragment {
     @Override
     public void startActivity(Intent intent, @Nullable Bundle options) {
         Logger.log(this, "Starting Activity");
-        Logger.log("Intent", intent);
-        Logger.log("Options", options);
+        Logger.log(this,"Intent", intent);
+        Logger.log(this,"Options", options);
         super.startActivity(intent, options);
     }
 
     @Override
     public void startActivityForResult(Intent intent, int requestCode, @Nullable Bundle options) {
         Logger.log(this, String.format(Locale.US, "Starting Activity for result (request code: %d)", requestCode));
-        Logger.log("Intent", intent);
-        Logger.log("Options", options);
+        Logger.log(this,"Intent", intent);
+        Logger.log(this,"Options", options);
         super.startActivityForResult(intent, requestCode, options);
     }
 }

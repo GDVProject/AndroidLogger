@@ -245,6 +245,7 @@ public class Logger {
      *
      * @return the current log file content
      */
+    @Deprecated
     public static String getCurrentLog() {
         return getLogger().getLog(getLogger().currentLogPath);
     }
@@ -254,6 +255,7 @@ public class Logger {
      *
      * @return the previous log file content
      */
+    @Deprecated
     public static String getPreviousLog() {
         return getLogger().getLog(getLogger().previousLogPath);
     }
@@ -415,6 +417,7 @@ public class Logger {
      * @param fileName path to log file
      * @return content of log file
      */
+    @Deprecated
     private String getLog(String fileName) {
         if (fileName != null) {
             StringBuilder stringBuilder = new StringBuilder();
@@ -444,8 +447,8 @@ public class Logger {
     private String zipLog() {
         try (FileOutputStream fileOutputStream = new FileOutputStream(zipLogPath);
              ZipOutputStream zipOutputStream = new ZipOutputStream(fileOutputStream)) {
-            addLogToZip(zipOutputStream, getLog(previousLogPath), LOG_FILE_NAME_PREVIOUS);
-            addLogToZip(zipOutputStream, getLog(currentLogPath), LOG_FILE_NAME_CURRENT);
+            addLogFileToZip(zipOutputStream, previousLogPath, LOG_FILE_NAME_PREVIOUS);
+            addLogFileToZip(zipOutputStream, currentLogPath, LOG_FILE_NAME_CURRENT);
         } catch (IOException e) {
             e.printStackTrace();
             return null;
@@ -460,6 +463,7 @@ public class Logger {
      * @param log             content of log file which should be added to zip-archive
      * @param fileName        name of log file in zip-archive
      */
+    @Deprecated
     private void addLogToZip(ZipOutputStream zipOutputStream, String log, String fileName) {
         try {
             if (!TextUtils.isEmpty(log)) {
@@ -467,6 +471,28 @@ public class Logger {
                 zipOutputStream.write(log.getBytes(StandardCharsets.UTF_8));
                 zipOutputStream.closeEntry();
             }
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+    }
+
+    /**
+     * Adds given log file to zipOutputStream object
+     *
+     * @param zipOutputStream stream to which log file should be added
+     * @param logFilePath     path to log file which should be added to zip-archive
+     * @param fileName        name of log file in zip-archive
+     */
+    private void addLogFileToZip(ZipOutputStream zipOutputStream, String logFilePath, String fileName) {
+        try {
+            FileInputStream fileInputStream = new FileInputStream(logFilePath);
+            zipOutputStream.putNextEntry(new ZipEntry(fileName));
+            byte[] buffer = new byte[65545];
+            int count;
+            while ((count = fileInputStream.read(buffer)) > 0){
+                zipOutputStream.write(buffer, 0, count);
+            }
+            zipOutputStream.closeEntry();
         } catch (IOException e) {
             e.printStackTrace();
         }

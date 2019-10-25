@@ -97,6 +97,16 @@ public class Logger {
             return this;
         }
 
+        public Initializer setAppId(String appId){
+            instance.appId = appId;
+            return this;
+        }
+
+        public Initializer setAppVersion(String appVersion){
+            instance.appVersion = appVersion;
+            return this;
+        }
+
         /**
          * Finishes Logger initializing.
          */
@@ -111,6 +121,8 @@ public class Logger {
 
     private File logFile;
     private String appTag;
+    private String appId;
+    private String appVersion;
     private boolean writeToConsole;
     private boolean writeToFile;
     private boolean writeToServer;
@@ -296,6 +308,7 @@ public class Logger {
             if (uri != null) {
                 intent.setType("application/zip");
                 intent.putExtra(Intent.EXTRA_STREAM, uri);
+                intent.putExtra(Intent.EXTRA_SUBJECT, String.format("Logs of %s(%s)", logger.appId, logger.appVersion));
             }
             return intent;
         }
@@ -322,6 +335,7 @@ public class Logger {
         if (uris.size() > 0) {
             intent.setType("text/plain");
             intent.putExtra(Intent.EXTRA_STREAM, uris);
+            intent.putExtra(Intent.EXTRA_SUBJECT, String.format("Logs of %s(%s)", logger.appId, logger.appVersion));
             return intent;
         }
         return null;
@@ -398,7 +412,6 @@ public class Logger {
      */
     private void startLogging() {
         logger = this;
-        String deviceData = String.format(Locale.US, "%s (SDK %d)", Build.MODEL, Build.VERSION.SDK_INT);
         final Thread.UncaughtExceptionHandler regularHandler = Thread.getDefaultUncaughtExceptionHandler();
         Thread.UncaughtExceptionHandler logHandler = new Thread.UncaughtExceptionHandler() {
             @Override
@@ -408,7 +421,9 @@ public class Logger {
             }
         };
         Thread.setDefaultUncaughtExceptionHandler(logHandler);
-        log(deviceData);
+        log(String.format("Logger started. Version: %s", BuildConfig.VERSION_NAME));
+        log(String.format("Application ID: %s. Version: %s", appId, appVersion));
+        log(String.format(Locale.US, "%s (SDK %d)", Build.MODEL, Build.VERSION.SDK_INT));
     }
 
     /**
